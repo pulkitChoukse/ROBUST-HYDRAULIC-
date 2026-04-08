@@ -2,7 +2,7 @@
 
 import numpy as np
 
-#class -- PenstockParams (for input parameters ,  configuration  of the penstock variables )
+#class --->  PenstockParams (for input parameters ,  configuration  of the penstock variables )
 
 class PenstockParams:
     """
@@ -14,8 +14,25 @@ class PenstockParams:
 
     wave_speed : float
         c — Acoustic wave speed (celerity) in m/s.
+    
+    initial_velocity : float
+        V0 — Flow velocity in the penstock before the trip event, in m/s.
+    
+    initial_pressure_head : float
+        H0 — The total piezometric head at the turbine inlet under
 
     
+    max_pressure_head : float
+        H_max — Maximum allowable piezometric head in metres.
+
+    min_pressure_head : float
+        H_min — Minimum allowable piezometric head in metres.
+    
+    friction_factor : float
+        f — Darcy-Weisbach friction factor (dimensionless).
+
+     n_segments : int
+        N — Number of spatial segments the penstock is divided into.
     """
 
     def __init__(
@@ -31,7 +48,7 @@ class PenstockParams:
         n_segments=100,
     ):
        
-         # ── primary attributes  ────────────────────────
+         # ---> primary attributes 
         self.length                = float(length)
         self.diameter              = float(diameter)
         self.wave_speed            = float(wave_speed)
@@ -43,7 +60,7 @@ class PenstockParams:
         self.n_segments            = int(n_segments)
 
     def validate(self):
-        #checks for validating teh penstocks parameters
+        # ---> checks for validating teh penstocks parameters
 
         checks = [
             self.length > 0,
@@ -59,7 +76,7 @@ class PenstockParams:
         return all(checks)
     def to_feature_vector(self):
 
-        #the ordered 1d array of the parameters to do further clacs
+        # ---> the ordered 1d array of the parameters to do further clacs
         return np.array([
             self.length,
             self.diameter,
