@@ -74,9 +74,9 @@ class PenstockParams:
             self.n_segments >= 10,
         ]
         return all(checks)
-    def to_feature_vector(self):
+    def to_feature_vector(self):  # to_feature_vector() --> gives input for ML model to predict
 
-        # ---> the ordered 1d array of the parameters to do further clacs
+        # ---> returns an ordered 1d array of the parameters to do further clacs
         return np.array([
             self.length,
             self.diameter,
@@ -87,3 +87,24 @@ class PenstockParams:
             self.min_pressure_head,
         ])
 
+
+
+
+class SimulationEngine:
+
+    # Executes the MOC simulation for a single penstock
+    
+    def __init__(self,sim_duration_factor=6.0):
+
+        self.g=9.81     # gravitational acceleration [m/s²]
+        self.sim_duration_factor =sim_duration_factor    # number of wave round-trips to simulate
+    
+    def run_simulation(self, params, closure_time):
+        
+        # Main entry point. 
+        # Runs the full MOC loop and returns a SimulationResult.
+        
+        result = self._compute_wave_dynamics(params, closure_time)
+        result.check_safety(params.max_pressure_head, params.min_pressure_head)
+        return result
+    
