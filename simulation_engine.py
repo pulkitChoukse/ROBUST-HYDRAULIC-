@@ -234,3 +234,86 @@ class SimulationEngine:
         result.check_safety(params.max_pressure_head, params.min_pressure_head)
         return result
     
+
+    def _compute_wave_dynamics(self, params, closure_time):
+        
+        """
+        main MOC time-stepping loop.
+        
+        Returns a SimulationResult with raw arrays before safety check.
+        """
+        
+        p  = params
+        N  = p.n_segments
+        B  = p.B
+        R  = p.R
+        Q0 = p.initial_discharge
+        H0 = p.initial_pressure_head
+
+        wave_period = 2.0 * p.length / p.wave_speed      # 2L/c
+        t_end       = self.sim_duration_factor * wave_period
+        n_steps     = int(t_end / p.dt) + 1
+
+        # initial steady-state at head of penstock (linear, head drops due to friction)
+        total_friction = R * N * Q0 * abs(Q0)
+        H_reservoir    = H0 + total_friction
+
+        H = np.array([H_reservoir - (i / N) * total_friction for i in range(N + 1)])
+        Q = np.full(N + 1, Q0)   # uniform discharge at steady state
+
+        # output storage
+        time_arr      = np.zeros(n_steps)
+        pressure_head = np.zeros(n_steps)
+        Q_out         = np.zeros(n_steps)
+
+        time_arr[0]      = 0.0
+        pressure_head[0] = H[N]
+        Q_out[0]         = Q[N]
+
+        H_new = np.zeros(N + 1)
+        Q_new = np.zeros(N + 1)
+
+        for step in range(1, n_steps):
+            t   = step * p.dt
+            tau = _guide_vane_tau(t, closure_time)  # current vane opening fraction(0-1)
+
+            # interior nodes i = 1 … N-1
+            for i in range(1, N):
+                H_new[i], Q_new[i] = _solve_interior(
+                    H[i - 1], Q[i - 1],
+                    H[i + 1], Q[i + 1],
+                    B, R
+                )
+
+            # upstream BC: C- from node 1 → node 0
+            C_M_up          = H[1] - B * Q[1] + R * Q[1] * abs(Q[1])
+            H_new[0], Q_new[0] = _upstream_bc(C_M_up, B, H_reservoir)
+
+            # downstream BC: C+ from node N-1 → node N
+            C_P_dn          = H[N - 1] + B * Q[N - 1] - R * Q[N - 1] * abs(Q[N - 1])
+            H_new[N], Q_new[N] = _downstream_bc(C_P_dn, B, tau, Q0, H0)
+
+            H[:] = H_new
+            Q[:] = Q_new
+
+            time_arr[step]      = t
+            pressure_head[step] = H[N]
+            Q_out[step]         = Q[N]
+
+        velocity = Q_out / p.area   # V = Q/A
+
+        return SimulationResult(time_arr, pressure_head, velocity, closure_time, wave_period)
+
+
+    def joukowsky_rise(self, params):
+        """
+        Theoretical upper-bound pressure rise for instantaneous closure.
+        Formula: ΔH = c*V0/g  (Joukowsky 1898).
+
+        Returns (delta_H, peak_H).
+        """
+        delta_H = params.wave_speed * params.initial_velocity / self.g
+        peak_H  = params.initial_pressure_head + delta_H
+        return delta_H, peak_H
+
+    
