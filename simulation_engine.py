@@ -88,6 +88,65 @@ class PenstockParams:
         ])
 
 
+# simulationEngine generates series of velocity and pressure as  output which is returned as SimulationResult object 
+# this class is used to better handle the Output of simulation from Simulation Engine
+
+
+class SimulationResult:
+    """
+    Stores all outputs from one MOC simulation.
+
+    """
+
+    def __init__(self, time_arr, pressure_head, velocity, closure_time, wave_period):
+        self.time_arr      = time_arr       # 1D array — time axis [s]
+        self.pressure_head = pressure_head  # 1D array — head at turbine end [m]
+        self.velocity      = velocity       # 1D array — velocity at turbine end [m/s]
+        self.closure_time  = closure_time   # Tc used for this run [s]
+        self.wave_period   = wave_period    # 2L/c [s]
+        self.head          = float(np.max(pressure_head))  # peak head — "head" in domain model
+        self.min_head      = float(np.min(pressure_head))
+        self.is_safe       = False          # set by check_safety()
+        self.n_steps       = len(time_arr)
+        self.time_range    = f"[0..{time_arr[-1]:.1f}] s"
+
+    def check_safety(self, max_pressure_head, min_pressure_head):
+        """
+        Evaluates whether peak and min head stay within limits.
+        Sets self.is_safe and returns it.
+
+        This helps in displaying Safe or Unsafe warns about on dashboard .
+        """
+        self.is_safe = (
+            self.head     <= max_pressure_head and
+            self.min_head >= min_pressure_head
+        )
+        return self.is_safe
+
+    def to_dict(self):
+        """
+        return result as a plain dict for the Dashboard to use to plot on graphs.
+        """
+        return {
+            "time":          self.time_arr,
+            "pressure_head": self.pressure_head,
+            "velocity":      self.velocity,
+            "peak_head":     self.head,
+            "min_head":      self.min_head,
+            "is_safe":       self.is_safe,
+            "closure_time":  self.closure_time,
+            "wave_period":   self.wave_period,
+            "n_steps":       self.n_steps,
+            "time_range":    self.time_range,
+        }
+
+    def visualize_outputs(self):
+        """
+        can be delacred here also  for visualising
+        but the visualisation part of output or plotting is handles by dashboard 
+        """
+        pass
+
 
 
 """
@@ -152,7 +211,6 @@ def _solve_interior(H_A, Q_A, H_B, Q_B, B, R):
     Q_P = (C_P - C_M) / (2.0 * B)
     H_P = (C_P + C_M) / 2.0
     return H_P, Q_P
-
 
 
 
