@@ -59,6 +59,17 @@ class PenstockParams:
         self.friction_factor       = float(friction_factor)
         self.n_segments            = int(n_segments)
 
+
+        # ── derived geometry (computed from above, not user input) ─────────
+        self.area              = np.pi * self.diameter**2 / 4.0   # A = πD²/4
+        self.initial_discharge = self.initial_velocity * self.area # Q0 = V0·A
+        self.dx                = self.length / self.n_segments     # spatial step
+        self.dt                = self.dx / self.wave_speed         # CFL time step
+        self.B                 = self.wave_speed / (9.81 * self.area)  # impedance c/(gA)
+        # friction resistance per segment: R = f·Δx / (2g·D·A²)
+        self.R = (self.friction_factor * self.dx) / (2.0 * 9.81 * self.diameter * self.area**2)
+        
+
     def validate(self):
         # ---> checks for validating teh penstocks parameters
 
