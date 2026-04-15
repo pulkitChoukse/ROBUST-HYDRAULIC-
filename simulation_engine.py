@@ -60,7 +60,7 @@ class PenstockParams:
         self.n_segments            = int(n_segments)
 
 
-        # ── derived geometry (computed from above, not user input) ─────────
+        # --> derived geometry (computed from above, not user input)
         self.area              = np.pi * self.diameter**2 / 4.0   # A = πD²/4
         self.initial_discharge = self.initial_velocity * self.area # Q0 = V0·A
         self.dx                = self.length / self.n_segments     # spatial step
@@ -328,3 +328,39 @@ class SimulationEngine:
         return delta_H, peak_H
 
     
+# the code for a test case for analysing its working
+
+if __name__ == "__main__":
+    print("=" * 58)
+    print("SimulationEngine — test case")
+    print("=" * 58)
+
+    params = PenstockParams(
+        length                = 1000.0,
+        diameter              = 2.0,
+        wave_speed            = 1000.0,
+        initial_velocity      = 3.0,
+        initial_pressure_head = 200.0,
+        max_pressure_head     = 280.0,
+        min_pressure_head     = 20.0,
+        friction_factor       = 0.015,
+        n_segments            = 100,
+    )
+
+    print(f"\nparams.validate() = {params.validate()}")
+    print(f"feature vector = {params.to_feature_vector()}")
+
+    engine   = SimulationEngine()
+    dH, peak = engine.joukowsky_rise(params)
+    print(f"\nJoukowsky rise : ΔH = {dH:.1f} m  →  peak = {peak:.1f} m")
+    print(f"Wave period    : 2L/c = {2*params.length/params.wave_speed:.2f} s")
+
+    result = engine.run_simulation(params, closure_time=15.0)
+    print(f"\nrun_simulation(Tc=15s)")
+    print(f"  n_steps   = {result.n_steps}")
+    print(f"  peak head = {result.head:.1f} m  (limit {params.max_pressure_head} m)")
+    print(f"  min head  = {result.min_head:.1f} m  (limit {params.min_pressure_head} m)")
+    print(f"  is_safe   = {result.is_safe}")
+    print(f"  to_dict() keys = {list(result.to_dict().keys())}")
+
+    print("\tTest-case finished.")
